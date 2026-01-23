@@ -5,9 +5,11 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
+from .models import User
+from django.core.mail import EmailMessage
 from django.contrib.auth import authenticate
 from drf_spectacular.utils import extend_schema
-from .serializers import LoginSerializer, LogoutSerializer
+from .serializers import LoginSerializer, LogoutSerializer, RegisterSerializer
 
 
 @extend_schema(
@@ -52,6 +54,7 @@ def login(request: Request):
         )
 
 
+@extend_schema(request=LogoutSerializer, responses={200: "Logout sucessfull"})
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def logout(request: Request):
@@ -74,3 +77,17 @@ def logout(request: Request):
             {"error": "Refresh token invalid or expired"},
             status=status.HTTP_400_BAD_REQUEST,
         )
+
+
+@extend_schema(request=RegisterSerializer, responses={200: "Sucess"})
+@api_view(["POST"])
+def register(request: Request):
+    serializer = RegisterSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    user = User.objects.create(email=serializer.validated_data["email"],is_active=False)
+    user.set_password(serializer.validated_data["password"])
+    user.save()
+    return Response(
+        {"message": "user created sucessfully!"},
+        status=status.HTTP_201_CREATED,
+    )
